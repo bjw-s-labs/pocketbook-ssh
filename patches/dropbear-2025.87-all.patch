@@ -1,10 +1,10 @@
-diff --git a/common-session.c dropbear_src/common-session.c
+diff --git a/src/common-session.c dropbear_src/common-session.c
 index 5fb33a6..014f0ee 100644
---- a/common-session.c
+--- a/src/common-session.c
 +++ dropbear_src/common-session.c
 @@ -609,15 +609,66 @@ static long select_timeout() {
  }
- 
+
  const char* get_user_shell() {
 -	/* an empty shell should be interpreted as "/bin/sh" */
 +	const char *shell=NULL;
@@ -51,7 +51,7 @@ index 5fb33a6..014f0ee 100644
 +#else
 +    pw->pw_dir="/";
 +#endif /* ALT_SHELL */
-+    
++
 +#ifdef ALT_SHELL;
 +    pw->pw_shell=ALT_SHELL;
 +#else
@@ -73,7 +73,7 @@ index 5fb33a6..014f0ee 100644
  	if (ses.authstate.pw_dir)
 @@ -628,7 +679,16 @@ void fill_passwd(const char* username) {
  		m_free(ses.authstate.pw_passwd);
- 
+
  	pw = getpwnam(username);
 +
 +#ifdef FAKE_ROOT
@@ -88,13 +88,13 @@ index 5fb33a6..014f0ee 100644
  		return;
  	}
  	ses.authstate.pw_uid = pw->pw_uid;
-diff --git a/compat.c dropbear_src/compat.c
+diff --git a/src/compat.c dropbear_src/compat.c
 index 8bd6add..f18cd34 100644
---- a/compat.c
+--- a/src/compat.c
 +++ dropbear_src/compat.c
 @@ -231,7 +231,11 @@ void setusershell() {
  }
- 
+
  static char **initshells() {
 -	static const char *okshells[] = { COMPAT_USER_SHELLS, NULL };
 +#ifdef ALT_SHELL
@@ -105,9 +105,9 @@ index 8bd6add..f18cd34 100644
  	register char **sp, *cp;
  	register FILE *fp;
  	struct stat statb;
-diff --git a/loginrec.c dropbear_src/loginrec.c
+diff --git a/src/loginrec.c dropbear_src/loginrec.c
 index f93e12e..5f80543 100644
---- a/loginrec.c
+--- a/src/loginrec.c
 +++ dropbear_src/loginrec.c
 @@ -276,6 +276,14 @@ login_init_entry(struct logininfo *li, int pid, const char *username,
  	if (username) {
@@ -124,31 +124,31 @@ index f93e12e..5f80543 100644
  		if (pw == NULL)
  			dropbear_exit("login_init_entry: Cannot find user \"%s\"",
  					li->username);
-diff --git a/runopts.h dropbear_src/runopts.h
+diff --git a/src/runopts.h dropbear_src/runopts.h
 index 1675836..b43a2ba 100644
---- a/runopts.h
+--- a/src/runopts.h
 +++ dropbear_src/runopts.h
 @@ -70,7 +70,11 @@ void load_all_hostkeys(void);
  typedef struct svr_runopts {
- 
+
  	char * bannerfile;
 -
-+    char * forcedhomepath;
-+    
++  char * forcedhomepath;
++
 +#ifdef ENABLE_SVR_MASTER_PASSWORD
 +	char * master_password;
 +#endif
  	int forkbg;
- 
+
  	/* ports and addresses are arrays of the portcount
-diff --git a/session.h dropbear_src/session.h
+diff --git a/src/session.h dropbear_src/session.h
 index 6706592..d99f7a1 100644
---- a/session.h
+--- a/src/session.h
 +++ dropbear_src/session.h
 @@ -56,6 +56,10 @@ void update_channel_prio(void);
  const char* get_user_shell(void);
  void fill_passwd(const char* username);
- 
+
 +#ifdef FAKE_ROOT
 +struct passwd *get_fake_pwnam(const char *username);
 +#endif
@@ -156,16 +156,16 @@ index 6706592..d99f7a1 100644
  /* Server */
  void svr_session(int sock, int childpipe) ATTRIB_NORETURN;
  void svr_dropbear_exit(int exitcode, const char* format, va_list param) ATTRIB_NORETURN;
-diff --git a/svr-auth.c dropbear_src/svr-auth.c
+diff --git a/src/svr-auth.c dropbear_src/svr-auth.c
 index 05ac6a9..9ee66f1 100644
---- a/svr-auth.c
+--- a/src/svr-auth.c
 +++ dropbear_src/svr-auth.c
 @@ -260,7 +260,18 @@ static int checkusername(const char *username, unsigned int userlen) {
  		TRACE(("checkusername: returning cached failure"))
  		return DROPBEAR_FAILURE;
  	}
 -
-+	
++
 +#ifdef ENABLE_SVR_MASTER_PASSWORD
 +	if (svr_opts.master_password)
 +    {
@@ -176,7 +176,7 @@ index 05ac6a9..9ee66f1 100644
 +#endif
 +	if (svr_opts.forcedhomepath)
 +		ses.authstate.pw_dir = svr_opts.forcedhomepath;
-+    
++
  	/* check that user exists */
  	if (!ses.authstate.pw_name) {
  		TRACE(("leave checkusername: user '%s' doesn't exist", username))
@@ -191,7 +191,7 @@ index 05ac6a9..9ee66f1 100644
  		usershell = "/bin/sh";
 +#endif /* ALT_SHELL */
  	}
- 
+
  	/* check the shell is valid. If /etc/shells doesn't exist, getusershell()
  	 * should return some standard shells like "/bin/sh" and "/bin/csh" (this
  	 * is platform-specific) */
@@ -205,13 +205,13 @@ index 05ac6a9..9ee66f1 100644
  	while ((listshell = getusershell()) != NULL) {
  		TRACE(("test shell is '%s'", listshell))
  		if (strcmp(listshell, usershell) == 0) {
-diff --git a/svr-chansession.c dropbear_src/svr-chansession.c
+diff --git a/src/svr-chansession.c dropbear_src/svr-chansession.c
 index 656a968..edb37ca 100644
---- a/svr-chansession.c
+--- a/src/svr-chansession.c
 +++ dropbear_src/svr-chansession.c
 @@ -612,6 +612,13 @@ static int sessionpty(struct ChanSess * chansess) {
  	}
- 
+
  	pw = getpwnam(ses.authstate.pw_name);
 +#ifdef FAKE_ROOT
 +    if(pw==NULL)
@@ -223,9 +223,9 @@ index 656a968..edb37ca 100644
  	if (!pw)
  		dropbear_exit("getpwnam failed after succeeding previously");
  	pty_setowner(pw, chansess->tty);
-diff --git a/svr-runopts.c dropbear_src/svr-runopts.c
+diff --git a/src/svr-runopts.c dropbear_src/svr-runopts.c
 index cb92595..33325fe 100644
---- a/svr-runopts.c
+--- a/src/svr-runopts.c
 +++ dropbear_src/svr-runopts.c
 @@ -46,6 +46,7 @@ static void printhelp(const char * progname) {
  					"-b bannerfile	Display the contents of bannerfile"
@@ -258,8 +258,9 @@ index cb92595..33325fe 100644
  	svr_opts.delay_hostkey = 0;
  	svr_opts.pidfile = expand_homedir_path(DROPBEAR_PIDFILE);
 +#ifdef ENABLE_SVR_MASTER_PASSWORD
-+	svr_opts.master_password = NULL;
++  svr_opts.master_password = NULL;
 +#endif
+ 	svr_opts.authorized_keys_dir = "~/.ssh";
  #if DROPBEAR_SVR_LOCALTCPFWD
  	svr_opts.nolocaltcp = 0;
  #endif
@@ -288,7 +289,7 @@ index cb92595..33325fe 100644
 @@ -434,6 +450,23 @@ void svr_getopts(int argc, char ** argv) {
  		opts.idle_timeout_secs = val;
  	}
- 
+
 +#ifdef ENABLE_SVR_MASTER_PASSWORD
 +	if (master_password_arg && strlen(master_password_arg) > 1) {
 +		// leading $ means it's already md5ed, else md5 it.
@@ -310,9 +311,9 @@ index cb92595..33325fe 100644
  		dropbear_log(LOG_INFO, "Forced command set to '%s'", svr_opts.forced_command);
  	}
 
-diff --git a/default_options.h dropbear_src/default_options.h
+diff --git a/src/default_options.h dropbear_src/default_options.h
 index 5132775..3877ebc 100644
---- a/default_options.h
+--- a/src/default_options.h
 +++ dropbear_src/default_options.h
 @@ -26,6 +26,7 @@ IMPORTANT: Some options will require "make clean" after changes */
  #define ECDSA_PRIV_FILENAME "/etc/dropbear/dropbear_ecdsa_host_key"
@@ -323,9 +324,9 @@ index 5132775..3877ebc 100644
   * on chosen ports and keeps accepting connections. This is the default.
   *
 
-diff --git a/svr-authpubkey.c b/svr-authpubkey.c
+diff --git a/src/svr-authpubkey.c b/svr-authpubkey.c
 index 5d298cb..b698c77 100644
---- a/svr-authpubkey.c
+--- a/src/svr-authpubkey.c
 +++ b/svr-authpubkey.c
 @@ -600,14 +600,14 @@ static int checkfileperm(char * filename) {
  		badperm = 1;
@@ -350,9 +351,9 @@ index 5d298cb..b698c77 100644
 
  	TRACE(("leave checkfileperm: success"))
  	return DROPBEAR_SUCCESS;
-diff --git a/default_options.h b/default_options.h
+diff --git a/src/default_options.h b/default_options.h
 index 5132775..3500e5f 100644
---- a/default_options.h
+--- a/src/default_options.h
 +++ b/default_options.h
 @@ -311,7 +311,7 @@ group1 in Dropbear server too */
   * Homedir is prepended if path begins with ~/

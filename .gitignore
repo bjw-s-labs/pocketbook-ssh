@@ -1,9 +1,2 @@
-dist
-.config_svr_stamp
-.db_client
-.db_server
-.config_cli_stamp
-a.out
-dbclient
-dropbear
-scp
+# Generated files
+dist/
