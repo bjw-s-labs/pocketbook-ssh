@@ -1,4 +1,4 @@
-FROM --platform=amd64 ubuntu:latest AS build
+FROM ubuntu:latest AS build
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN=true
@@ -65,7 +65,22 @@ RUN <<EOF
 EOF
 
 FROM ubuntu:latest
+WORKDIR /output/bin
+COPY --chown=root:root --chmod=777 --from=build /source/openssh-portable/sftp-server /output/bin/sftp-server
+COPY --chown=root:root --chmod=777 --from=build /source/dropbear/dropbear /output/bin/dropbear
+COPY --chown=root:root --chmod=777 --from=build /source/dropbear/dropbearkey /output/bin/dropbearkey
+
+COPY application /output/application
+
 WORKDIR /output
-COPY --chown=root:root --chmod=777 --from=build /source/openssh-portable/sftp-server /output/sftp-server
-COPY --chown=root:root --chmod=777 --from=build /source/dropbear/dropbear /output/dropbear
-COPY --chown=root:root --chmod=777 --from=build /source/dropbear/dropbearkey /output/dropbearkey
+RUN <<EOF
+  mkdir -p pocketbook-ssh
+  cp -r bin pocketbook-ssh/dropbear
+  cp application/* pocketbook-ssh/
+EOF
+
+WORKDIR /output/pocketbook-ssh
+RUN <<EOF
+  apt update && apt install -y zip
+  zip -rm pocketbook-ssh.zip *.app dropbear
+EOF
