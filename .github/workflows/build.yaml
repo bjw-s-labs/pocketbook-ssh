@@ -59,7 +59,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Fetch build output
-        uses: kohlerdominik/docker-run-action@170cd7d34e33265bfba818cddf461bae2d6c44d2 # v2.0.0
+        uses: kohlerdominik/docker-run-action@c55645518fe94d713d1eefd4a00c8f03fa02aec5 # v2.1.0
         with:
           image: ${{ env.TOOLCHAIN_IMAGE }}
           volumes: |
